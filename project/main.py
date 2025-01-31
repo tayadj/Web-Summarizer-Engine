@@ -21,7 +21,7 @@ class Model:
 		self.model_path = config.get('model_path', './data')
 
 		self.processor = self.Processor(self.batch_size, self.embedding_dimension, self.units, self.start_token, self.end_token, self.data_path, self.model_path)
-		self.text_tokenizer, self.summary_tokenizer, self.dataset_train, self.dataset_test, self.buffer_size, _, self.steps_per_epoch_train, self.steps_per_epoch_test, _, _, self.text_language_size, self.summary_language_size = self.processor.load_dataset()
+		self.text_tokenizer, self.summary_tokenizer, self.dataset_train, self.dataset_test, self.buffer_size, self.steps_per_epoch_train, self.steps_per_epoch_test, self.text_language_size, self.summary_language_size, self.max_length_text, self.max_length_summary = self.processor.load_dataset()
 
 
 
@@ -84,13 +84,16 @@ class Model:
 			text_language_size = len(text_tokenizer.word_index) + 1
 			summary_language_size = len(summary_tokenizer.word_index) + 1
 
+			max_length_summary = summary_tensor.shape[1] 
+			max_length_text =  text_tensor.shape[1]
+
 			dataset_train = tensorflow.data.Dataset.from_tensor_slices((text_tensor_train, summary_tensor_train)).shuffle(buffer_size)
 			dataset_train = dataset_train.batch(self.batch_size, drop_remainder = True)
 
 			dataset_test = tensorflow.data.Dataset.from_tensor_slices((text_tensor_test, summary_tensor_test)).shuffle(buffer_size)
 			dataset_test = dataset_test.batch(self.batch_size, drop_remainder = True)
 
-			return text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, self.batch_size, steps_per_epoch_train, steps_per_epoch_test, self.embedding_dimension, self.units, text_language_size, summary_language_size
+			return text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, steps_per_epoch_train, steps_per_epoch_test, text_language_size, summary_language_size, max_length_text, max_length_summary
 
 
 
@@ -279,15 +282,7 @@ class Model:
 
 	def summarize(self, sentence, encoder, decoder):
 
-		data = self.processor.load_data('./data/data.csv')
-		text_language = data['Text']
-		summary_language = data['Summary']
-		text_tokenizer, text_tensor = self.processor.tokenize(text_language)
-		summary_tokenizer, summary_tensor = self.processor.tokenize(summary_language)
-		max_length_summary = summary_tensor.shape[1] 
-		max_length_text =  text_tensor.shape[1]
-
-		attention_plot = numpy.zeros((max_length_summary, max_length_text))
+		attention_plot = numpy.zeros((self.max_length_summary, self.max_length_text))
 
 		sentence = self.processor.process(sentence)
 
@@ -302,7 +297,7 @@ class Model:
 
 				continue
 
-		inputs = tensorflow.keras.preprocessing.sequence.pad_sequences([inputs], maxlen=max_length_text, padding='post')
+		inputs = tensorflow.keras.preprocessing.sequence.pad_sequences([inputs], maxlen=self.max_length_text, padding='post')
 		inputs = tensorflow.convert_to_tensor(inputs)
 
 		result = ''
@@ -313,7 +308,7 @@ class Model:
 		decoder_hidden = encoder_hidden
 		decoder_input = tensorflow.expand_dims([self.summary_tokenizer.word_index[self.start_token]], 0)
 
-		for time in range(max_length_summary):
+		for time in range(self.max_length_summary):
 	
 			predictions, decoder_hidden, attention_weights = decoder(decoder_input, decoder_hidden, encoder_output)
 
