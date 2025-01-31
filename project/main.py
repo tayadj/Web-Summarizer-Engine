@@ -10,8 +10,8 @@ config = {
     'batch_size': 1,
     'embedding_dimension': 128,
     'units': 512,
-	'start_token': '<sos>',
-	'end_token': '<eos>'
+	'start_token': '<start>',
+	'end_token': '<end>'
 }
 
 class Model:
@@ -311,7 +311,17 @@ class Model:
 
 		sentence = preprocessor.process(sentence)
 
-		inputs = [text_tokenizer.word_index[i] for i in sentence.split(' ')]
+		inputs = []
+		for word in sentence.split(' '):
+
+			try:
+
+				inputs.append(text_tokenizer.word_index[word])
+
+			except KeyError:
+
+				continue
+
 		inputs = tensorflow.keras.preprocessing.sequence.pad_sequences([inputs], maxlen=max_length_text, padding='post')
 		inputs = tensorflow.convert_to_tensor(inputs)
 
