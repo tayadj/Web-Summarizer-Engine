@@ -77,23 +77,19 @@ class Model:
 			text_tensor_train, text_tensor_test, summary_tensor_train, summary_tensor_test = sklearn.model_selection.train_test_split(text_tensor, summary_tensor, test_size = 0.2)
  
 			buffer_size = len(text_tensor_train)
-			batch_size = self.batch_size
-			steps_per_epoch_train = len(text_tensor_train) // batch_size
-			steps_per_epoch_test = len(text_tensor_test) // batch_size
-
-			embedding_dimension = self.embedding_dimension
-			units =  self.units
+			steps_per_epoch_train = len(text_tensor_train) // self.batch_size
+			steps_per_epoch_test = len(text_tensor_test) // self.batch_size 
 
 			text_language_size = len(text_tokenizer.word_index) + 1
 			summary_language_size = len(summary_tokenizer.word_index) + 1
 
 			dataset_train = tensorflow.data.Dataset.from_tensor_slices((text_tensor_train, summary_tensor_train)).shuffle(buffer_size)
-			dataset_train = dataset_train.batch(batch_size, drop_remainder = True)
+			dataset_train = dataset_train.batch(self.batch_size, drop_remainder = True)
 
 			dataset_test = tensorflow.data.Dataset.from_tensor_slices((text_tensor_test, summary_tensor_test)).shuffle(buffer_size)
-			dataset_test = dataset_test.batch(batch_size, drop_remainder = True)
+			dataset_test = dataset_test.batch(self.batch_size, drop_remainder = True)
 
-			return text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size
+			return text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, self.batch_size, steps_per_epoch_train, steps_per_epoch_test, self.embedding_dimension, self.units, text_language_size, summary_language_size
 
 
 
