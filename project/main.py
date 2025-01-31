@@ -56,7 +56,7 @@ class Model:
 
 			return text
 
-		def load_data(self, path = './data.csv'):
+		def load_data(self, path = './data/data.csv'):
 
 			data_raw = pandas.read_csv(path)
 
@@ -66,7 +66,7 @@ class Model:
 
 			return data
 
-		def load_dataset(self, path = './data.csv'):
+		def load_dataset(self, path = './data/data.csv'):
 
 			data = self.load_data(path)
 			text_language = data['Text']
@@ -77,12 +77,12 @@ class Model:
 			text_tensor_train, text_tensor_test, summary_tensor_train, summary_tensor_test = sklearn.model_selection.train_test_split(text_tensor, summary_tensor, test_size = 0.2)
  
 			buffer_size = len(text_tensor_train)
-			batch_size = 1
+			batch_size = self.batch_size
 			steps_per_epoch_train = len(text_tensor_train) // batch_size
 			steps_per_epoch_test = len(text_tensor_test) // batch_size
 
-			embedding_dimension = 256
-			units = 1024 
+			embedding_dimension = self.embedding_dimension
+			units =  self.units
 
 			text_language_size = len(text_tokenizer.word_index) + 1
 			summary_language_size = len(summary_tokenizer.word_index) + 1
@@ -288,7 +288,7 @@ class Model:
 
 	def summarize(self, sentence, encoder, decoder):
 
-		data = self.processor.load_data('./data.csv')
+		data = self.processor.load_data('./data/data.csv')
 		text_language = data['Text']
 		summary_language = data['Summary']
 		text_tokenizer, text_tensor = self.processor.tokenize(text_language)
@@ -343,7 +343,7 @@ class Model:
 def demo(epochs = 10):
 
 	config = {
-		'batch_size': 1,
+		'batch_size': 2,
 		'embedding_dimension': 128,
 		'units': 512,
 		'start_token': '<start>',
@@ -352,8 +352,9 @@ def demo(epochs = 10):
 
 	model = Model(config)
 	encoder, decoder, train_loss, test_loss = model.learn(epochs)
+	print(encoder.summary(), '\n', decoder.summary())
 
-	data = pandas.read_csv('./data.csv')['Text']
+	data = pandas.read_csv('./data/data.csv')['Text']
 	result = [model.summarize(text, encoder, decoder) for text in data]
 
 	for result_ in result:
