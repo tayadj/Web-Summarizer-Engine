@@ -326,7 +326,7 @@ class Model:
 def demo(epochs = 10):
 
 	config = {
-		'batch_size': 2,
+		'batch_size': 4,
 		'embedding_dimension': 128,
 		'units': 512,
 		'start_token': '<start>',
