@@ -32,10 +32,8 @@ class Model:
 			self.batch_size = batch_size
 			self.embedding_dimension = embedding_dimension
 			self.units = units
-	
 			self.start_token = start_token
 			self.end_token = end_token
-
 			self.data_path = data_path
 			self.model_path = model_path
 
@@ -57,9 +55,9 @@ class Model:
 
 			return text
 
-		def load_data(self, path = './data/data.csv'):
+		def load_data(self):
 
-			data_raw = pandas.read_csv(path)
+			data_raw = pandas.read_csv(self.data_path)
 
 			data = data_raw
 			data['Text'] = data['Text'].apply(self.process)
@@ -67,9 +65,9 @@ class Model:
 
 			return data
 
-		def load_dataset(self, path = './data/data.csv'):
+		def load_dataset(self):
 
-			data = self.load_data(path)
+			data = self.load_data()
 			text_language = data['Text']
 			summary_language = data['Summary']
 
@@ -236,7 +234,7 @@ class Model:
 
 
 
-	def learn(self, epochs = 10):
+	def learn(self, epochs):
 
 		encoder = self.Encoder(self.text_language_size, self.embedding_dimension, self.units, self.batch_size)
 		decoder = self.Decoder(self.summary_language_size, self.embedding_dimension, self.units, self.batch_size)
