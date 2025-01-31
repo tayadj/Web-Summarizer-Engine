@@ -51,7 +51,7 @@ class Model:
 
 			text = re.sub(r'([{}])'.format(re.escape(string.punctuation)), r' \1 ', text)
 			text = re.sub(r'\s+', ' ', text).strip()
-			text = '<start> ' + text + ' <end>'
+			text = self.start_token + ' ' + text + ' ' + self.end_token
 			text = text.lower()
 
 			return text
@@ -199,7 +199,7 @@ class Model:
 
 				encoder_output, encoder_hidden = encoder(text, encoder_hidden)
 				decoder_hidden = encoder_hidden
-				decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index['<start>']] * batch_size, 1)
+				decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index[self.start_token]] * batch_size, 1)
 
 				for time in range(1, summary.shape[1]):
 
@@ -226,7 +226,7 @@ class Model:
 
 		encoder_output, encoder_hidden = encoder(text, encoder_hidden)
 		decoder_hidden = encoder_hidden
-		decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index['<start>']] * batch_size, 1)
+		decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index[self.start_token]] * batch_size, 1)
 
 		for time in range(1, summary.shape[1]):
 
@@ -321,7 +321,7 @@ class Model:
 		encoder_output, encoder_hidden = encoder(inputs, hidden)
 
 		decoder_hidden = encoder_hidden
-		decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index['<start>']], 0)
+		decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index[self.start_token]], 0)
 
 		for time in range(max_length_summary):
 	
@@ -330,13 +330,15 @@ class Model:
 			prediction = tensorflow.argmax(predictions[0]).numpy()
 			result += summary_tokenizer.index_word[prediction] + ' '
 
-			if summary_tokenizer.index_word[prediction] == '<end>':
+			if summary_tokenizer.index_word[prediction] == self.end_token:
 			
 				return result, sentence
 
 			decoder_input = tensorflow.expand_dims([prediction], 0)
 
 		return result, sentence
+
+
 
 def demo(epochs = 10):
 
