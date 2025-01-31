@@ -8,311 +8,305 @@ import re
 
 
 
-class Preprocessor:
+class Model:
 
-	def tokenize(self, language):
+	class Processor:
 
-		tokenizer = tensorflow.keras.preprocessing.text.Tokenizer(filters = '')
-		tokenizer.fit_on_texts(language)
-		tensor = tokenizer.texts_to_sequences(language)
-		tensor = tensorflow.keras.preprocessing.sequence.pad_sequences(tensor, padding = 'post')
+		def tokenize(self, language):
 
-		return tokenizer, tensor
+			tokenizer = tensorflow.keras.preprocessing.text.Tokenizer(filters = '')
+			tokenizer.fit_on_texts(language)
+			tensor = tokenizer.texts_to_sequences(language)
+			tensor = tensorflow.keras.preprocessing.sequence.pad_sequences(tensor, padding = 'post')
 
-	def process(self, text):
+			return tokenizer, tensor
 
-		text = re.sub(r'([{}])'.format(re.escape(string.punctuation)), r' \1 ', text)
-		text = re.sub(r'\s+', ' ', text).strip()
-		text = '<start> ' + text + ' <end>'
-		text = text.lower()
+		def process(self, text):
 
-		return text
+			text = re.sub(r'([{}])'.format(re.escape(string.punctuation)), r' \1 ', text)
+			text = re.sub(r'\s+', ' ', text).strip()
+			text = '<start> ' + text + ' <end>'
+			text = text.lower()
 
-	def load_data(self, path = './data.csv'):
+			return text
 
-		data_raw = pandas.read_csv(path)
+		def load_data(self, path = './data.csv'):
 
-		data = data_raw
-		data['Text'] = data['Text'].apply(self.process)
-		data['Summary'] = data['Summary'].apply(self.process)
+			data_raw = pandas.read_csv(path)
 
-		return data
+			data = data_raw
+			data['Text'] = data['Text'].apply(self.process)
+			data['Summary'] = data['Summary'].apply(self.process)
 
-	def load_dataset(self, path = './data.csv'):
+			return data
 
-		data = self.load_data(path)
-		text_language = data['Text']
-		summary_language = data['Summary']
+		def load_dataset(self, path = './data.csv'):
 
-		text_tokenizer, text_tensor = self.tokenize(text_language)
-		summary_tokenizer, summary_tensor = self.tokenize(summary_language)
-		text_tensor_train, text_tensor_test, summary_tensor_train, summary_tensor_test = sklearn.model_selection.train_test_split(text_tensor, summary_tensor, test_size = 0.2)
+			data = self.load_data(path)
+			text_language = data['Text']
+			summary_language = data['Summary']
+
+			text_tokenizer, text_tensor = self.tokenize(text_language)
+			summary_tokenizer, summary_tensor = self.tokenize(summary_language)
+			text_tensor_train, text_tensor_test, summary_tensor_train, summary_tensor_test = sklearn.model_selection.train_test_split(text_tensor, summary_tensor, test_size = 0.2)
  
-		buffer_size = len(text_tensor_train)
-		batch_size = 1
-		steps_per_epoch_train = len(text_tensor_train) // batch_size
-		steps_per_epoch_test = len(text_tensor_test) // batch_size
+			buffer_size = len(text_tensor_train)
+			batch_size = 1
+			steps_per_epoch_train = len(text_tensor_train) // batch_size
+			steps_per_epoch_test = len(text_tensor_test) // batch_size
 
-		embedding_dimension = 256
-		units = 1024 
+			embedding_dimension = 256
+			units = 1024 
 
-		text_language_size = len(text_tokenizer.word_index) + 1
-		summary_language_size = len(summary_tokenizer.word_index) + 1
+			text_language_size = len(text_tokenizer.word_index) + 1
+			summary_language_size = len(summary_tokenizer.word_index) + 1
 
-		dataset_train = tensorflow.data.Dataset.from_tensor_slices((text_tensor_train, summary_tensor_train)).shuffle(buffer_size)
-		dataset_train = dataset_train.batch(batch_size, drop_remainder = True)
+			dataset_train = tensorflow.data.Dataset.from_tensor_slices((text_tensor_train, summary_tensor_train)).shuffle(buffer_size)
+			dataset_train = dataset_train.batch(batch_size, drop_remainder = True)
 
-		dataset_test = tensorflow.data.Dataset.from_tensor_slices((text_tensor_test, summary_tensor_test)).shuffle(buffer_size)
-		dataset_test = dataset_test.batch(batch_size, drop_remainder = True)
+			dataset_test = tensorflow.data.Dataset.from_tensor_slices((text_tensor_test, summary_tensor_test)).shuffle(buffer_size)
+			dataset_test = dataset_test.batch(batch_size, drop_remainder = True)
 
-		return text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size
-
-
-
-class Encoder(tensorflow.keras.Model):
-
-	def __init__(self, vocabulary_size, embedding_dimension, encoder_units, batch_size):
-
-		super(Encoder, self).__init__()
-
-		self.vocabulary_size = vocabulary_size
-		self.embedding_dimension = embedding_dimension
-		self.encoder_units = encoder_units
-		self.batch_size = batch_size
-
-		self.embedding = tensorflow.keras.layers.Embedding(vocabulary_size, embedding_dimension)
-		self.GRU = tensorflow.keras.layers.GRU \
-		(
-			encoder_units,
-			return_sequences = True,
-			return_state = True,
-			recurrent_initializer = 'glorot_uniform'
-		)
-
-	def call(self, input, hidden):
-
-		input = self.embedding(input)
-		output, state = self.GRU(input, initial_state = hidden)
-
-		return output, state
-
-	def initialize_hidden_state(self):
-
-		return tensorflow.zeros((self.batch_size, self.encoder_units))
+			return text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size
 
 
 
-class Decoder(tensorflow.keras.Model):
+	class Encoder(tensorflow.keras.Model):
 
-	def __init__(self, vocabulary_size, embedding_dimension, decoder_units, batch_size, attention = None):
+		def __init__(self, vocabulary_size, embedding_dimension, encoder_units, batch_size):
 
-		super(Decoder, self).__init__()
+			super(Model.Encoder, self).__init__()
 
-		self.vocabulary_size = vocabulary_size
-		self.embedding_dimension = embedding_dimension
-		self.decoder_units = decoder_units
-		self.batch_size = batch_size
-		self.attention = attention
+			self.vocabulary_size = vocabulary_size
+			self.embedding_dimension = embedding_dimension
+			self.encoder_units = encoder_units
+			self.batch_size = batch_size
 
-		self.embedding = tensorflow.keras.layers.Embedding(vocabulary_size, embedding_dimension)
-		self.dense = tensorflow.keras.layers.Dense(vocabulary_size)
-		self.GRU = tensorflow.keras.layers.GRU \
-		(
-			decoder_units,
-			return_sequences = True,
-			return_state = True,
-			recurrent_initializer = 'glorot_uniform'
-		)
+			self.embedding = tensorflow.keras.layers.Embedding(vocabulary_size, embedding_dimension)
+			self.GRU = tensorflow.keras.layers.GRU \
+			(
+				encoder_units,
+				return_sequences = True,
+				return_state = True,
+				recurrent_initializer = 'glorot_uniform'
+			)
 
-	def call(self, input, hidden, encoder_output):
+		def call(self, input, hidden):
+
+			input = self.embedding(input)
+			output, state = self.GRU(input, initial_state = hidden)
+
+			return output, state
+
+		def initialize_hidden_state(self):
+
+			return tensorflow.zeros((self.batch_size, self.encoder_units))
+
+
+
+	class Decoder(tensorflow.keras.Model):
+
+		def __init__(self, vocabulary_size, embedding_dimension, decoder_units, batch_size, attention = None):
+
+			super(Model.Decoder, self).__init__()
+
+			self.vocabulary_size = vocabulary_size
+			self.embedding_dimension = embedding_dimension
+			self.decoder_units = decoder_units
+			self.batch_size = batch_size
+			self.attention = attention
+
+			self.embedding = tensorflow.keras.layers.Embedding(vocabulary_size, embedding_dimension)
+			self.dense = tensorflow.keras.layers.Dense(vocabulary_size)
+			self.GRU = tensorflow.keras.layers.GRU \
+			(
+				decoder_units,
+				return_sequences = True,
+				return_state = True,
+				recurrent_initializer = 'glorot_uniform'
+			)
+
+		def call(self, input, hidden, encoder_output):
 		
-		input = self.embedding(input)
+			input = self.embedding(input)
 
-		attention_weights = None
+			attention_weights = None
 
-		if self.attention:
+			if self.attention:
 
-			context_vector, attention_weights = self.attention(hidden, encoder_output)
-			input = tensorflow.concat([tensorflow.expand_dims(context_vector, 1), input], axis = -1)
+				context_vector, attention_weights = self.attention(hidden, encoder_output)
+				input = tensorflow.concat([tensorflow.expand_dims(context_vector, 1), input], axis = -1)
 
-		output, state = self.GRU(input, initial_state = hidden)
-		output = tensorflow.reshape(output, (-1, output.shape[2]))
-		predictions = self.dense(output)			
+			output, state = self.GRU(input, initial_state = hidden)
+			output = tensorflow.reshape(output, (-1, output.shape[2]))
+			predictions = self.dense(output)			
 
-		return predictions, state, attention_weights
-
-
-
-preprocessor = Preprocessor()
-text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = preprocessor.load_dataset()
-example_text_batch, example_summary_batch = next(iter(dataset_train))
-
-encoder = Encoder(text_language_size, embedding_dimension, units, batch_size)
-sample_hidden = encoder.initialize_hidden_state()
-sample_output, sample_hidden = encoder(example_text_batch, sample_hidden)
-print ('Encoder output shape: (batch size, sequence length, units) {}'.format(sample_output.shape))
-print ('Encoder Hidden state shape: (batch size, units) {}'.format(sample_hidden.shape))
-
-decoder = Decoder(summary_language_size, embedding_dimension, units, batch_size)
-sample_decoder_output, _, _ = decoder(tensorflow.random.uniform((batch_size, 1)),sample_hidden, sample_output)
-print ('Decoder output shape: (batch_size, vocab size) {}'.format(sample_decoder_output.shape))
+			return predictions, state, attention_weights
 
 
 
-def loss_function(observation, expectation):
+	def loss_function(self, observation, expectation):
 
-	loss = tensorflow.keras.losses.SparseCategoricalCrossentropy(from_logits = True, reduction = 'none')
-	loss_ = loss(observation, expectation)
+		loss = tensorflow.keras.losses.SparseCategoricalCrossentropy(from_logits = True, reduction = 'none')
+		loss_ = loss(observation, expectation)
 
-	mask = tensorflow.math.logical_not(tensorflow.math.equal(observation, 0))
-	mask = tensorflow.cast(mask, dtype = loss_.dtype)
-	loss_ *= mask
+		mask = tensorflow.math.logical_not(tensorflow.math.equal(observation, 0))
+		mask = tensorflow.cast(mask, dtype = loss_.dtype)
+		loss_ *= mask
 
-	return tensorflow.reduce_mean(loss_)
+		return tensorflow.reduce_mean(loss_)
 
 
 
-def train_engine():
+	def train_engine(self):
 
-	optimizer = tensorflow.keras.optimizers.Adam()	
+		optimizer = tensorflow.keras.optimizers.Adam()	
 
-	@tensorflow.function
-	def train_step(text, summary, encoder_hidden, encoder, decoder):
+		@tensorflow.function
+		def train_step(text, summary, encoder_hidden, encoder, decoder):
 
-		preprocessor = Preprocessor()
+			preprocessor = self.Processor()
+			text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = preprocessor.load_dataset()
+		
+			loss = 0
+
+			with tensorflow.GradientTape() as tape:
+
+				encoder_output, encoder_hidden = encoder(text, encoder_hidden)
+				decoder_hidden = encoder_hidden
+				decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index['<start>']] * batch_size, 1)
+
+				for time in range(1, summary.shape[1]):
+
+					predictions, decoder_hidden, _ = decoder(decoder_input, decoder_hidden, encoder_output)
+					loss += self.loss_function(summary[:, time], predictions)
+					decoder_input = tensorflow.expand_dims(summary[:, time], 1)
+
+				batch_loss = (loss / int(summary.shape[1]))
+				variables = encoder.trainable_variables + decoder.trainable_variables
+				gradients = tape.gradient(loss, variables)
+				optimizer.apply_gradients(zip(gradients, variables))
+
+			return batch_loss
+
+		return train_step
+
+
+
+	def test_engine(self, text, summary, encoder_hidden, encoder, decoder):
+
+		preprocessor = self.Processor()
 		text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = preprocessor.load_dataset()
-		
+
 		loss = 0
 
-		with tensorflow.GradientTape() as tape:
+		encoder_output, encoder_hidden = encoder(text, encoder_hidden)
+		decoder_hidden = encoder_hidden
+		decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index['<start>']] * batch_size, 1)
 
-			encoder_output, encoder_hidden = encoder(text, encoder_hidden)
-			decoder_hidden = encoder_hidden
-			decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index['<start>']] * batch_size, 1)
+		for time in range(1, summary.shape[1]):
 
-			for time in range(1, summary.shape[1]):
+			predictions, decoder_hidden, _ = decoder(decoder_input, decoder_hidden, encoder_output)
+			loss += self.loss_function(summary[:, time], predictions)
+			decoder_input = tensorflow.expand_dims(summary[:, time], 1)
 
-				predictions, decoder_hidden, _ = decoder(decoder_input, decoder_hidden, encoder_output)
-				loss += loss_function(summary[:, time], predictions)
-				decoder_input = tensorflow.expand_dims(summary[:, time], 1)
-
-			batch_loss = (loss / int(summary.shape[1]))
-			variables = encoder.trainable_variables + decoder.trainable_variables
-			gradients = tape.gradient(loss, variables)
-			optimizer.apply_gradients(zip(gradients, variables))
+		batch_loss = (loss / int(summary.shape[1]))
 
 		return batch_loss
 
-	return train_step
 
-def test_engine(text, summary, encoder_hidden, encoder, decoder):
 
-	preprocessor = Preprocessor()
-	text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = preprocessor.load_dataset()
+	def learn(self, epochs = 10):
 
-	loss = 0
+		preprocessor = self.Processor()
+		text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = preprocessor.load_dataset()
 
-	encoder_output, encoder_hidden = encoder(text, encoder_hidden)
-	decoder_hidden = encoder_hidden
-	decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index['<start>']] * batch_size, 1)
+		encoder = self.Encoder(text_language_size, embedding_dimension, units, batch_size)
+		decoder = self.Decoder(summary_language_size, embedding_dimension, units, batch_size)
 
-	for time in range(1, summary.shape[1]):
+		train_function = self.train_engine()
+		test_function = self.test_engine
+		train_loss = []
+		test_loss = []
 
-		predictions, decoder_hidden, _ = decoder(decoder_input, decoder_hidden, encoder_output)
-		loss += loss_function(summary[:, time], predictions)
-		decoder_input = tensorflow.expand_dims(summary[:, time], 1)
+		for epoch in range(epochs):
 
-	batch_loss = (loss / int(summary.shape[1]))
+			start = time.time()
 
-	return batch_loss
+			encoder_hidden = encoder.initialize_hidden_state()
+			total_loss_train = 0
 
-def learn(epochs = 10):
+			for (batch, (text, summary)) in enumerate(dataset_train.take(steps_per_epoch_train)):
 
-	preprocessor = Preprocessor()
-	text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = preprocessor.load_dataset()
+				batch_loss = train_function(text, summary, encoder_hidden, encoder, decoder)
+				total_loss_train += batch_loss
 
-	encoder = Encoder(text_language_size, embedding_dimension, units, batch_size)
-	decoder = Decoder(summary_language_size, embedding_dimension, units, batch_size)
+				print('Train Epoch {} | Batch {} Loss {:.4f}'.format(epoch + 1, batch, batch_loss))
 
-	train_function = train_engine()
-	test_function = test_engine
-	train_loss = []
-	test_loss = []
+			encoder_hidden = encoder.initialize_hidden_state()
+			total_loss_test = 0
 
-	for epoch in range(epochs):
+			for (batch, (text, summary)) in enumerate(dataset_test.take(steps_per_epoch_test)):
 
-		start = time.time()
+				batch_loss = test_function(text, summary, encoder_hidden, encoder, decoder)
+				total_loss_test += batch_loss
 
-		encoder_hidden = encoder.initialize_hidden_state()
-		total_loss_train = 0
+				print('Test Epoch {} | Batch {} Loss {:.4f}'.format(epoch + 1, batch, batch_loss))
 
-		for (batch, (text, summary)) in enumerate(dataset_train.take(steps_per_epoch_train)):
+			train_loss.append(total_loss_train / steps_per_epoch_train)
+			test_loss.append(total_loss_test / steps_per_epoch_test)
 
-			batch_loss = train_function(text, summary, encoder_hidden, encoder, decoder)
-			total_loss_train += batch_loss
+			print('Epoch {} | Train Loss {:.4f}, Test Loss {:.4f}'.format(epoch + 1, train_loss[-1], test_loss[-1]))
+			print('Time taken for epoch {} sec\n'.format(time.time() - start))
 
-			print('Train Epoch {} | Batch {} Loss {:.4f}'.format(epoch + 1, batch, batch_loss))
+		return encoder, decoder, train_loss, test_loss
 
-		encoder_hidden = encoder.initialize_hidden_state()
-		total_loss_test = 0
 
-		for (batch, (text, summary)) in enumerate(dataset_test.take(steps_per_epoch_test)):
 
-			batch_loss = test_function(text, summary, encoder_hidden, encoder, decoder)
-			total_loss_test += batch_loss
+	def summarize(self, sentence, encoder, decoder):
 
-			print('Test Epoch {} | Batch {} Loss {:.4f}'.format(epoch + 1, batch, batch_loss))
+		preprocessor = self.Processor()
+		data = preprocessor.load_data('./data.csv')
+		text_language = data['Text']
+		summary_language = data['Summary']
+		text_tokenizer, text_tensor = preprocessor.tokenize(text_language)
+		summary_tokenizer, summary_tensor = preprocessor.tokenize(summary_language)
+		text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = preprocessor.load_dataset()
+		max_length_summary = summary_tensor.shape[1] 
+		max_length_text =  text_tensor.shape[1]
 
-		train_loss.append(total_loss_train / steps_per_epoch_train)
-		test_loss.append(total_loss_test / steps_per_epoch_test)
+		attention_plot = numpy.zeros((max_length_summary, max_length_text))
 
-		print('Epoch {} | Train Loss {:.4f}, Test Loss {:.4f}'.format(epoch + 1, train_loss[-1], test_loss[-1]))
-		print('Time taken for epoch {} sec\n'.format(time.time() - start))
+		sentence = preprocessor.process(sentence)
 
-	return encoder, decoder, train_loss, test_loss
+		inputs = [text_tokenizer.word_index[i] for i in sentence.split(' ')]
+		inputs = tensorflow.keras.preprocessing.sequence.pad_sequences([inputs], maxlen=max_length_text, padding='post')
+		inputs = tensorflow.convert_to_tensor(inputs)
 
-def summarize(sentence, encoder, decoder):
+		result = ''
 
-	preprocessor = Preprocessor()
-	data = preprocessor.load_data('./data.csv')
-	text_language = data['Text']
-	summary_language = data['Summary']
-	text_tokenizer, text_tensor = preprocessor.tokenize(text_language)
-	summary_tokenizer, summary_tensor = preprocessor.tokenize(summary_language)
-	text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = preprocessor.load_dataset()
-	max_length_summary = summary_tensor.shape[1] 
-	max_length_text =  text_tensor.shape[1]
+		hidden = [tensorflow.zeros((1, units))]
+		encoder_output, encoder_hidden = encoder(inputs, hidden)
 
-	attention_plot = numpy.zeros((max_length_summary, max_length_text))
+		decoder_hidden = encoder_hidden
+		decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index['<start>']], 0)
 
-	sentence = preprocessor.process(sentence)
-
-	inputs = [text_tokenizer.word_index[i] for i in sentence.split(' ')]
-	inputs = tensorflow.keras.preprocessing.sequence.pad_sequences([inputs], maxlen=max_length_text, padding='post')
-	inputs = tensorflow.convert_to_tensor(inputs)
-
-	result = ''
-
-	hidden = [tensorflow.zeros((1, units))]
-	encoder_output, encoder_hidden = encoder(inputs, hidden)
-
-	decoder_hidden = encoder_hidden
-	decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index['<start>']], 0)
-
-	for time in range(max_length_summary):
+		for time in range(max_length_summary):
 	
-		predictions, decoder_hidden, attention_weights = decoder(decoder_input, decoder_hidden, encoder_output)
+			predictions, decoder_hidden, attention_weights = decoder(decoder_input, decoder_hidden, encoder_output)
 
-		prediction = tensorflow.argmax(predictions[0]).numpy()
-		result += summary_tokenizer.index_word[prediction] + ' '
+			prediction = tensorflow.argmax(predictions[0]).numpy()
+			result += summary_tokenizer.index_word[prediction] + ' '
 
-		if summary_tokenizer.index_word[prediction] == '<end>':
+			if summary_tokenizer.index_word[prediction] == '<end>':
 			
-			return result, sentence
+				return result, sentence
 
-		decoder_input = tensorflow.expand_dims([prediction], 0)
+			decoder_input = tensorflow.expand_dims([prediction], 0)
 
-	return result, sentence
+		return result, sentence
 
-encoder, decoder, train_loss, test_loss = learn(10)
-print(summarize("The quick brown fox jumps over the lazy dog.", encoder, decoder))
+model = Model()
+
+encoder, decoder, train_loss, test_loss = model.learn(20)
+print(model.summarize("The quick brown fox jumps over the lazy dog.", encoder, decoder))
