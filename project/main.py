@@ -6,11 +6,43 @@ import numpy
 import time
 import re
 
-
+config = {
+    'batch_size': 1,
+    'embedding_dimension': 128,
+    'units': 512,
+	'start_token': '<sos>',
+	'end_token': '<eos>'
+}
 
 class Model:
 
+	def __init__(self, config):
+
+		self.batch_size = config.get('batch_size', 64)
+		self.embedding_dimension = config.get('embedding_dimension', 256)
+		self.units = config.get('units', 1024)
+	
+		self.start_token = config.get('start_token', '<start>')
+		self.end_token = config.get('end_token', '<end>')
+
+		self.data_path = config.get('data_path', './data/data.csv')
+		self.model_path = config.get('model_path', './data')
+
+
+
 	class Processor:
+
+		def __init__(self, batch_size, embedding_dimension, units, start_token, end_token, data_path, model_path):
+
+			self.batch_size = batch_size
+			self.embedding_dimension = embedding_dimension
+			self.units = units
+	
+			self.start_token = start_token
+			self.end_token = end_token
+
+			self.data_path = data_path
+			self.model_path = model_path
 
 		def tokenize(self, language):
 
@@ -165,7 +197,7 @@ class Model:
 		@tensorflow.function
 		def train_step(text, summary, encoder_hidden, encoder, decoder):
 
-			preprocessor = self.Processor()
+			preprocessor = self.Processor(self.batch_size, self.embedding_dimension, self.units, self.start_token, self.end_token, self.data_path, self.model_path)
 			text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = preprocessor.load_dataset()
 		
 			loss = 0
@@ -195,7 +227,7 @@ class Model:
 
 	def test_engine(self, text, summary, encoder_hidden, encoder, decoder):
 
-		preprocessor = self.Processor()
+		preprocessor = self.Processor(self.batch_size, self.embedding_dimension, self.units, self.start_token, self.end_token, self.data_path, self.model_path)
 		text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = preprocessor.load_dataset()
 
 		loss = 0
@@ -218,7 +250,7 @@ class Model:
 
 	def learn(self, epochs = 10):
 
-		preprocessor = self.Processor()
+		preprocessor = self.Processor(self.batch_size, self.embedding_dimension, self.units, self.start_token, self.end_token, self.data_path, self.model_path)
 		text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = preprocessor.load_dataset()
 
 		encoder = self.Encoder(text_language_size, embedding_dimension, units, batch_size)
@@ -265,7 +297,7 @@ class Model:
 
 	def summarize(self, sentence, encoder, decoder):
 
-		preprocessor = self.Processor()
+		preprocessor = self.Processor(self.batch_size, self.embedding_dimension, self.units, self.start_token, self.end_token, self.data_path, self.model_path)
 		data = preprocessor.load_data('./data.csv')
 		text_language = data['Text']
 		summary_language = data['Summary']
@@ -306,7 +338,7 @@ class Model:
 
 		return result, sentence
 
-model = Model()
+model = Model(config)
 
-encoder, decoder, train_loss, test_loss = model.learn(20)
-print(model.summarize("The quick brown fox jumps over the lazy dog.", encoder, decoder))
+#encoder, decoder, train_loss, test_loss = model.learn(20)
+#print(model.summarize("The quick brown fox jumps over the lazy dog.", encoder, decoder))
