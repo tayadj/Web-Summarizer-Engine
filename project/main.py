@@ -21,6 +21,7 @@ class Model:
 		self.model_path = config.get('model_path', './data')
 
 		self.processor = self.Processor(self.batch_size, self.embedding_dimension, self.units, self.start_token, self.end_token, self.data_path, self.model_path)
+		self.text_tokenizer, self.summary_tokenizer, self.dataset_train, self.dataset_test, self.buffer_size, _, self.steps_per_epoch_train, self.steps_per_epoch_test, _, _, self.text_language_size, self.summary_language_size = self.processor.load_dataset()
 
 
 
@@ -187,15 +188,13 @@ class Model:
 		@tensorflow.function
 		def train_step(text, summary, encoder_hidden, encoder, decoder):
 
-			text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = self.processor.load_dataset()
-		
 			loss = 0
 
 			with tensorflow.GradientTape() as tape:
 
 				encoder_output, encoder_hidden = encoder(text, encoder_hidden)
 				decoder_hidden = encoder_hidden
-				decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index[self.start_token]] * batch_size, 1)
+				decoder_input = tensorflow.expand_dims([self.summary_tokenizer.word_index[self.start_token]] * self.batch_size, 1)
 
 				for time in range(1, summary.shape[1]):
 
@@ -216,13 +215,11 @@ class Model:
 
 	def test_engine(self, text, summary, encoder_hidden, encoder, decoder):
 
-		text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = self.processor.load_dataset()
-
 		loss = 0
 
 		encoder_output, encoder_hidden = encoder(text, encoder_hidden)
 		decoder_hidden = encoder_hidden
-		decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index[self.start_token]] * batch_size, 1)
+		decoder_input = tensorflow.expand_dims([self.summary_tokenizer.word_index[self.start_token]] * self.batch_size, 1)
 
 		for time in range(1, summary.shape[1]):
 
@@ -238,10 +235,8 @@ class Model:
 
 	def learn(self, epochs = 10):
 
-		text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = self.processor.load_dataset()
-
-		encoder = self.Encoder(text_language_size, embedding_dimension, units, batch_size)
-		decoder = self.Decoder(summary_language_size, embedding_dimension, units, batch_size)
+		encoder = self.Encoder(self.text_language_size, self.embedding_dimension, self.units, self.batch_size)
+		decoder = self.Decoder(self.summary_language_size, self.embedding_dimension, self.units, self.batch_size)
 
 		train_function = self.train_engine()
 		test_function = self.test_engine
@@ -255,7 +250,7 @@ class Model:
 			encoder_hidden = encoder.initialize_hidden_state()
 			total_loss_train = 0
 
-			for (batch, (text, summary)) in enumerate(dataset_train.take(steps_per_epoch_train)):
+			for (batch, (text, summary)) in enumerate(self.dataset_train.take(self.steps_per_epoch_train)):
 
 				batch_loss = train_function(text, summary, encoder_hidden, encoder, decoder)
 				total_loss_train += batch_loss
@@ -265,15 +260,15 @@ class Model:
 			encoder_hidden = encoder.initialize_hidden_state()
 			total_loss_test = 0
 
-			for (batch, (text, summary)) in enumerate(dataset_test.take(steps_per_epoch_test)):
+			for (batch, (text, summary)) in enumerate(self.dataset_test.take(self.steps_per_epoch_test)):
 
 				batch_loss = test_function(text, summary, encoder_hidden, encoder, decoder)
 				total_loss_test += batch_loss
 
 				print('Test Epoch {} | Batch {} Loss {:.4f}'.format(epoch + 1, batch, batch_loss))
 
-			train_loss.append(total_loss_train / steps_per_epoch_train)
-			test_loss.append(total_loss_test / steps_per_epoch_test)
+			train_loss.append(total_loss_train / self.steps_per_epoch_train)
+			test_loss.append(total_loss_test / self.steps_per_epoch_test)
 
 			print('Epoch {} | Train Loss {:.4f}, Test Loss {:.4f}'.format(epoch + 1, train_loss[-1], test_loss[-1]))
 			print('Time taken for epoch {} sec\n'.format(time.time() - start))
@@ -289,7 +284,6 @@ class Model:
 		summary_language = data['Summary']
 		text_tokenizer, text_tensor = self.processor.tokenize(text_language)
 		summary_tokenizer, summary_tensor = self.processor.tokenize(summary_language)
-		text_tokenizer, summary_tokenizer, dataset_train, dataset_test, buffer_size, batch_size, steps_per_epoch_train, steps_per_epoch_test, embedding_dimension, units, text_language_size, summary_language_size = self.processor.load_dataset()
 		max_length_summary = summary_tensor.shape[1] 
 		max_length_text =  text_tensor.shape[1]
 
@@ -302,7 +296,7 @@ class Model:
 
 			try:
 
-				inputs.append(text_tokenizer.word_index[word])
+				inputs.append(self.text_tokenizer.word_index[word])
 
 			except KeyError:
 
@@ -313,20 +307,20 @@ class Model:
 
 		result = ''
 
-		hidden = [tensorflow.zeros((1, units))]
+		hidden = [tensorflow.zeros((1, self.units))]
 		encoder_output, encoder_hidden = encoder(inputs, hidden)
 
 		decoder_hidden = encoder_hidden
-		decoder_input = tensorflow.expand_dims([summary_tokenizer.word_index[self.start_token]], 0)
+		decoder_input = tensorflow.expand_dims([self.summary_tokenizer.word_index[self.start_token]], 0)
 
 		for time in range(max_length_summary):
 	
 			predictions, decoder_hidden, attention_weights = decoder(decoder_input, decoder_hidden, encoder_output)
 
 			prediction = tensorflow.argmax(predictions[0]).numpy()
-			result += summary_tokenizer.index_word[prediction] + ' '
+			result += self.summary_tokenizer.index_word[prediction] + ' '
 
-			if summary_tokenizer.index_word[prediction] == self.end_token:
+			if self.summary_tokenizer.index_word[prediction] == self.end_token:
 			
 				return result, sentence
 
