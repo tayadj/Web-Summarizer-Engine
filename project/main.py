@@ -1,4 +1,5 @@
 import tensorflow
+import requests
 import sklearn
 import pandas
 import string
@@ -320,6 +321,47 @@ class Model:
 			decoder_input = tensorflow.expand_dims([prediction], 0)
 
 		return result, sentence
+
+
+
+class Parser:
+	
+	def __init__(self):
+
+		pass
+
+	def extract(self, text):
+
+		pattern_header = r'<h[1-6][^>]*>(.*?)</h[1-6]>'
+		pattern_paragraph = r'<p[^>]*>(.*?)</p>'
+		clean_pattern = r'<[^>]+>'
+
+		segments_header = re.findall(pattern_header, text, re.DOTALL)
+		segments_paragraph = re.findall(pattern_paragraph, text, re.DOTALL)
+
+		clean_segments = \
+		[re.sub(clean_pattern, '', segment) for segment in segments_header] + \
+		[re.sub(clean_pattern, '', segment) for segment in segments_paragraph]
+
+		return clean_segments
+
+	def load_page(self, url):
+
+		try:
+
+			response = requests.get(url)
+			response.raise_for_status()
+
+		except requests.exceptions.RequestException as exception:
+
+			return None
+
+		return response.text
+
+
+class Engine:
+
+	pass
 
 
 
