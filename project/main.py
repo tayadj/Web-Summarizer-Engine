@@ -323,12 +323,12 @@ class Model:
 
 
 
-def demo(epochs = 10):
+def demo(epochs = 25):
 
 	config = {
-		'batch_size': 4,
-		'embedding_dimension': 128,
-		'units': 512,
+		'batch_size': 8,
+		'embedding_dimension': 1024,
+		'units': 1024,
 		'start_token': '<start>',
 		'end_token': '<end>'
 	}
@@ -337,9 +337,11 @@ def demo(epochs = 10):
 	encoder, decoder, train_loss, test_loss = model.learn(epochs)
 	print(encoder.summary(), '\n', decoder.summary())
 
-	data = pandas.read_csv('./data/data.csv')['Text']
+	data = pandas.read_csv('./data/data.csv')['Text'].sample(n=10)
 	result = [model.summarize(text, encoder, decoder) for text in data]
 
 	for result_ in result:
 
 		print(result_)
+
+	return encoder, decoder
