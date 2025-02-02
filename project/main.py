@@ -332,13 +332,11 @@ class Parser:
 
 	def extract(self, text):
 
-		pattern_header = r'<h[1-6][^>]*>(.*?)</h[1-6]>'
-		pattern_paragraph = r'<p[^>]*>(.*?)</p>'
+		segments_header = re.findall(r'<h[1-6][^>]*>(.*?)</h[1-6]>', text, re.DOTALL)
+		segments_paragraph = re.findall(r'<p[^>]*>(.*?)</p>', text, re.DOTALL)
+		segments_caption = re.findall(r'<figcaption[^>]*>(.*?)</figcaption>', text, re.DOTALL)
 
-		segments_header = re.findall(pattern_header, text, re.DOTALL)
-		segments_paragraph = re.findall(pattern_paragraph, text, re.DOTALL)
-
-		segments = segments_header + segments_paragraph
+		segments = segments_header + segments_paragraph + segments_caption
 		segments = [re.sub(r'<[^>]+>', '', segment) for segment in segments] 
 		segments = [re.sub(r'\[\d+\]|&#91;\d+&#93;', '', segment) for segment in segments] 
 		segments = [re.sub(r'&#\d+;', '', segment) for segment in segments] 
