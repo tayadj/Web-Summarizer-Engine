@@ -334,16 +334,18 @@ class Parser:
 
 		pattern_header = r'<h[1-6][^>]*>(.*?)</h[1-6]>'
 		pattern_paragraph = r'<p[^>]*>(.*?)</p>'
-		clean_pattern = r'<[^>]+>'
 
 		segments_header = re.findall(pattern_header, text, re.DOTALL)
 		segments_paragraph = re.findall(pattern_paragraph, text, re.DOTALL)
 
-		clean_segments = \
-		[re.sub(clean_pattern, '', segment) for segment in segments_header] + \
-		[re.sub(clean_pattern, '', segment) for segment in segments_paragraph]
+		segments = segments_header + segments_paragraph
+		segments = [re.sub(r'<[^>]+>', '', segment) for segment in segments] 
+		segments = [re.sub(r'\[\d+\]|&#91;\d+&#93;', '', segment) for segment in segments] 
+		segments = [re.sub(r'&#\d+;', '', segment) for segment in segments] 
+		segments = [re.sub(r'\s+', ' ', segment) for segment in segments]
+		segments = [segment.strip() for segment in segments]
 
-		return clean_segments
+		return segments
 
 	def load_page(self, url):
 
