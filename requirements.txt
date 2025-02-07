@@ -1,0 +1,10 @@
+numpy
+pandas
+pytest
+requests
+scikit-learn
+tensorflow
+
+
+
+
