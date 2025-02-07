@@ -361,15 +361,23 @@ class Parser:
 
 class Engine:
 
-	pass
+	def __init__(self, encoder, decoder, parser):
+
+		self.encoder = encoder
+		self.decoder = decoder
+		self.parser = parser
+
+	def process():
+
+		pass
 
 
 
 def demo(epochs = 25):
 
 	config = {
-		'batch_size': 8,
-		'embedding_dimension': 1024,
+		'batch_size': 32,
+		'embedding_dimension': 256,
 		'units': 1024,
 		'start_token': '<start>',
 		'end_token': '<end>'
