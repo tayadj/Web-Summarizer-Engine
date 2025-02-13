@@ -361,37 +361,42 @@ class Parser:
 
 class Engine:
 
-	def __init__(self, encoder, decoder, parser):
+	def __init__(self, encoder, decoder, parser, model):
 
 		self.encoder = encoder
 		self.decoder = decoder
 		self.parser = parser
+		self.model = model
 
-	def process():
+	def process(self, url):
 
-		pass
+		texts = self.parser.extract(parser.load_page(url))
+		summary = ''
+
+		for text in texts:
+
+			for sentence in text:
+
+				summary += self.model.summarize(sentence, encoder, decoder)[0].replace(' ' + model.end_token + ' ', '') + '; '
+
+		return summary
+
+		
 
 
 
-def demo(epochs = 25):
+config = {
+	'batch_size': 32,
+	'embedding_dimension': 256,
+	'units': 1024,
+	'start_token': '<start>',
+	'end_token': '<end>'
+}
 
-	config = {
-		'batch_size': 32,
-		'embedding_dimension': 256,
-		'units': 1024,
-		'start_token': '<start>',
-		'end_token': '<end>'
-	}
+epochs = 20
+model = Model(config)
+encoder, decoder, train_loss, test_loss = model.learn(epochs)
+parser = Parser()
 
-	model = Model(config)
-	encoder, decoder, train_loss, test_loss = model.learn(epochs)
-	print(encoder.summary(), '\n', decoder.summary())
-
-	data = pandas.read_csv('./data/data.csv')['Text'].sample(n=10)
-	result = [model.summarize(text, encoder, decoder) for text in data]
-
-	for result_ in result:
-
-		print(result_)
-
-	return encoder, decoder
+engine = Engine(encoder, decoder, parser, model)
+print(engine.process('https://en.wikipedia.org/wiki/Biology'))
